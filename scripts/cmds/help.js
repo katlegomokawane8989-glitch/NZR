@@ -1,101 +1,175 @@
 const fs = require("fs");
+const path = require("path");
+const { getPrefix } = global.utils;
+const { commands, aliases } = global.GoatBot;
+
 module.exports = {
   config: {
     name: "help",
-    aliases: ["menu", "cmds"],
-    version: "6.0",
-    author: "Voldigo Anos",
+    version: "3.2",
+    author: "NTKhang // xnil6x",
     countDown: 5,
     role: 0,
-    shortDescription: "Menu d’aide adorable et coloré 💖",
-    longDescription: "Affiche le menu d’aide avec un style doux, féminin et décoré 🌸",
-    category: "system",
+    description: "View command information with enhanced interface",
+    category: "info",
     guide: {
-      en: "{pn} [page | nomCommande]"
+      en: "{pn} [command] - View command details\n{pn} all - View all commands\n{pn} c [category] - View commands in category"
     }
   },
 
-  onStart: async function ({ api, event, args, prefix, threadsData }) {
-    const commands = global.GoatBot?.commands || new Map();
-
-    // Préfixe dynamique 🌈
-    const threadData = await threadsData.get(event.threadID);
-    const threadPrefix = threadData?.data?.prefix || prefix || global.GoatBot.config.prefix || "^";
-
-    // 💖 help <commande>
-    if (args[0] && isNaN(args[0])) {
-      const name = args[0].toLowerCase();
-      const cmd =
-        commands.get(name) ||
-        Array.from(commands.values()).find(c => c.config.aliases?.includes(name));
-
-      if (!cmd)
-        return api.sendMessage(`❌ Oups ! La commande "${name}" n’existe pas 💔`, event.threadID, event.messageID);
-
-      const { config } = cmd;
-      const aliases = config.aliases?.length ? config.aliases.join(", ") : "Aucun 💭";
-      const role =
-        config.role == 2 ? "👑 Admin" : config.role == 1 ? "⚙️ Modératrice" : "🌷 Utilisatrice";
-      const cooldown = config.countDown ? `${config.countDown} sec` : "Aucun ⏳";
-      const category = config.category || "Autre 🌸";
-
-      const msg =
-`╔═══════♡ 💕 𝐈𝐍𝐅𝐎 𝐂𝐎𝐌𝐌𝐀𝐍𝐃𝐄 💕 ♡═══════╗
-║ 🌸 Nom : ${config.name}
-║ 💐 Catégorie : ${category}
-║ 💖 Description :
-║   ${config.longDescription || config.shortDescription || "Aucune description disponible 🌺"}
-║ 🎀 Alias : ${aliases}
-║ ⏰ Cooldown : ${cooldown}
-║ 👑 Rôle : ${role}
-║
-║ 🌈 Utilisation :
-║   ${threadPrefix}${config.guide?.en || config.name}
-╚════════════════════════════════════╝`;
-
-      return api.sendMessage(msg, event.threadID, event.messageID);
+  langs: {
+    en: {
+      helpHeader: "╔══════◇◆◇══════╗\n"
+                + "      BOT COMMAND LIST\n"
+                + "╠══════◇◆◇══════╣",
+      categoryHeader: "\n   ┌──── {category} ────┐\n",
+      commandItem: "║ │ ❤️‍🩹 {name}",
+      helpFooter: "║ └─────────────┘\n"
+                + "╚══════◇◆◇══════╝",
+      commandInfo: "╔══════◇◆◇══════╗\n"
+                 + "║           COMMAND INFORMATION      \n"
+                 + "╠══════◇◆◇══════╣\n"
+                 + "║ 🏷️ Name: {name}\n"
+                 + "║ 📝 Description: {description}\n"
+                 + "║ 📂 Category: {category}\n"
+                 + "║ 🔤 Aliases: {aliases}\n"
+                 + "║ 🏷️ Version: {version}\n"
+                 + "║ 🔒 Permissions: {role}\n"
+                 + "║ ⏱️ Cooldown: {countDown}s\n"
+                 + "║ 🔧 Use Prefix: {usePrefix}\n"
+                 + "║ 👤 Author: {author}\n"
+                 + "╠══════◇◆◇══════╣",
+      usageHeader: "║ 🛠️ USAGE GUIDE",
+      usageBody: " ║ {usage}",
+      usageFooter: "╚══════◇◆◇══════╝",
+      commandNotFound: "⚠️ Command '{command}' not found!",
+      doNotHave: "None",
+      roleText0: "👥 All Users",
+      roleText1: "👑 Group Admins",
+      roleText2: "⚡ Bot Admins",
+      totalCommands: "📊 Total Commands: {total}\n"
+                  + "Lonely BoT"
     }
+  },
 
-    // 💕 Menu principal
-    const page = parseInt(args[0]) || 1;
+  onStart: async function({ message, args, event, threadsData, role }) {
+    const { threadID } = event;
+    const prefix = getPrefix(threadID);
+    const commandName = args[0]?.toLowerCase();
+    const bannerPath = path.join(__dirname, "assets", "20250319_111041.png");
 
-    // Trier les commandes par catégorie
-    const categorized = {};
-    for (const [name, cmd] of commands.entries()) {
-      const cat = cmd.config?.category || "Autre 🌷";
-      if (!categorized[cat]) categorized[cat] = [];
-      categorized[cat].push(cmd.config.name);
-    }
+    if (commandName === 'c' && args[1]) {
+      const categoryArg = args[1].toUpperCase();
+      const commandsInCategory = [];
 
-    const allCategories = Object.entries(categorized);
-    const totalPages = Math.ceil(allCategories.length / 3);
-    if (page < 1 || page > totalPages)
-      return api.sendMessage(`❌ Page invalide 🌸 Il y a ${totalPages} pages !`, event.threadID, event.messageID);
+      for (const [name, cmd] of commands) {
+        if (cmd.config.role > 1 && role < cmd.config.role) continue;
+        const category = cmd.config.category?.toUpperCase() || "GENERAL";
+        if (category === categoryArg) {
+          commandsInCategory.push({ name });
+        }
+      }
 
-    const startIndex = (page - 1) * 3;
-    const endIndex = startIndex + 3;
-    const pageCategories = allCategories.slice(startIndex, endIndex);
+      if (commandsInCategory.length === 0) {
+        return message.reply(`❌ No commands found in category: ${categoryArg}`);
+      }
 
-    // 🌺 Message kawaii
-    let msg = "";
-    msg += "╔════════════════════════════════════╗\n";
-    msg += "║      🌷💞 𝐌𝐄𝐍𝐔 𝐃’𝐀𝐈𝐃𝐄 𝐑𝐎𝐒𝐄 💞🌷       ║\n";
-    msg += "╠════════════════════════════════════╣\n";
+      let replyMsg = this.langs.en.helpHeader;
+      replyMsg += this.langs.en.categoryHeader.replace(/{category}/g, categoryArg);
 
-    pageCategories.forEach(([cat, cmds]) => {
-      msg += `║ 💌 ${cat.toUpperCase()}\n`;
-      msg += "║ ────────────────────────────────\n";
-      cmds.sort().forEach(cmd => {
-        msg += `║ 💖 ${cmd}\n`;
+      commandsInCategory.sort((a, b) => a.name.localeCompare(b.name)).forEach(cmd => {
+        replyMsg += this.langs.en.commandItem.replace(/{name}/g, cmd.name) + "\n";
       });
-      msg += "║ ────────────────────────────────\n";
-    });
 
-    msg += `║ 📄 Page : ${page} / ${totalPages}\n`;
-    msg += `║ 💫 Commandes : ${commands.size}\n`;
-    msg += `║ 💋 Utilise : ${threadPrefix}help <commande>\n`;
-    msg += "╚════════════════════════════════════╝";
+      replyMsg += this.langs.en.helpFooter;
+      replyMsg += "\n" + this.langs.en.totalCommands.replace(/{total}/g, commandsInCategory.length);
 
-    api.sendMessage(msg, event.threadID, event.messageID);
+      return message.reply(replyMsg);
+    }
+
+    if (!commandName || commandName === 'all') {
+      const categories = new Map();
+
+      for (const [name, cmd] of commands) {
+        if (cmd.config.role > 1 && role < cmd.config.role) continue;
+
+        const category = cmd.config.category?.toUpperCase() || "GENERAL";
+        if (!categories.has(category)) {
+          categories.set(category, []);
+        }
+        categories.get(category).push({ name });
+      }
+
+      const sortedCategories = [...categories.keys()].sort();
+      let replyMsg = this.langs.en.helpHeader.replace(/{prefix}/g, prefix);
+      let totalCommands = 0;
+
+      for (const category of sortedCategories) {
+        const commandsInCategory = categories.get(category).sort((a, b) => a.name.localeCompare(b.name));
+        totalCommands += commandsInCategory.length;
+
+        replyMsg += this.langs.en.categoryHeader.replace(/{category}/g, category);
+
+        commandsInCategory.forEach(cmd => {
+          replyMsg += this.langs.en.commandItem.replace(/{name}/g, cmd.name) + "\n";
+        });
+
+        replyMsg += this.langs.en.helpFooter;
+      }
+
+      replyMsg += "\n" + this.langs.en.totalCommands.replace(/{total}/g, totalCommands);
+
+      try {
+        if (fs.existsSync(bannerPath)) {
+          return message.reply({
+            body: replyMsg,
+            attachment: fs.createReadStream(bannerPath)
+          });
+        } else {
+          return message.reply(replyMsg);
+        }
+      } catch (e) {
+        console.error("Couldn't load help banner:", e);
+        return message.reply(replyMsg);
+      }
+    }
+
+    let cmd = commands.get(commandName) || commands.get(aliases.get(commandName));
+    if (!cmd) {
+      return message.reply(this.langs.en.commandNotFound.replace(/{command}/g, commandName));
+    }
+
+    const config = cmd.config;
+    const description = config.description?.en || config.description || "No description";
+    const aliasesList = config.aliases?.join(", ") || this.langs.en.doNotHave;
+    const category = config.category?.toUpperCase() || "GENERAL";
+
+    let roleText;
+    switch(config.role) {
+      case 1: roleText = this.langs.en.roleText1; break;
+      case 2: roleText = this.langs.en.roleText2; break;
+      default: roleText = this.langs.en.roleText0;
+    }
+
+    let guide = config.guide?.en || config.usage || config.guide || "No usage guide available";
+    if (typeof guide === "object") guide = guide.body;
+    guide = guide.replace(/\{prefix\}/g, prefix).replace(/\{name\}/g, config.name).replace(/\{pn\}/g, prefix + config.name);
+
+    let replyMsg = this.langs.en.commandInfo
+      .replace(/{name}/g, config.name)
+      .replace(/{description}/g, description)
+      .replace(/{category}/g, category)
+      .replace(/{aliases}/g, aliasesList)
+      .replace(/{version}/g, config.version)
+      .replace(/{role}/g, roleText)
+      .replace(/{countDown}/g, config.countDown || 1)
+      .replace(/{usePrefix}/g, typeof config.usePrefix === "boolean" ? (config.usePrefix ? "✅ Yes" : "❌ No") : "❓ Unknown")
+      .replace(/{author}/g, config.author || "Unknown");
+
+    replyMsg += "\n" + this.langs.en.usageHeader + "\n" +
+                this.langs.en.usageBody.replace(/{usage}/g, guide.split("\n").join("\n ")) + "\n" +
+                this.langs.en.usageFooter;
+
+    return message.reply(replyMsg);
   }
 };
