@@ -1,101 +1,103 @@
+const fs = require("fs-extra");
+const { utils } = global;
+
 module.exports = {
-    config: {
-        name: "prefix",
-        version: "3.0",
-        author: "XxGhostxx & BrayanPrince",
-        countDown: 5,
-        role: 0,
-        shortDescription: "Affiche le préfixe du bot",
-        longDescription: "Répond avec un ton mignon et taquin pour montrer le préfixe du bot",
-        category: "reply"
-    },
+        config: {
+                name: "prefix",
+                version: "1.4",
+                author: "NTKhang",
+                countDown: 5,
+                role: 0,
+                description: "Thay đổi dấu lệnh của bot trong box chat của bạn hoặc cả hệ thống bot (chỉ admin bot)",
+                category: "config",
+                guide: {
+                        vi: "   {pn} <new prefix>: thay đổi prefix mới trong box chat của bạn"
+                                + "\n   Ví dụ:"
+                                + "\n    {pn} #"
+                                + "\n\n   {pn} <new prefix> -g: thay đổi prefix mới trong hệ thống bot (chỉ admin bot)"
+                                + "\n   Ví dụ:"
+                                + "\n    {pn} # -g"
+                                + "\n\n   {pn} reset: thay đổi prefix trong box chat của bạn về mặc định",
+                        en: "   {pn} <new prefix>: change new prefix in your box chat"
+                                + "\n   Example:"
+                                + "\n    {pn} #"
+                                + "\n\n   {pn} <new prefix> -g: change new prefix in system bot (only admin bot)"
+                                + "\n   Example:"
+                                + "\n    {pn} # -g"
+                                + "\n\n   {pn} reset: change prefix in your box chat to default"
+                }
+        },
 
-    onStart: async function () {},
+        langs: {
+                vi: {
+                        reset: "Đã reset prefix của bạn về mặc định: %1",
+                        onlyAdmin: "Chỉ admin mới có thể thay đổi prefix hệ thống bot",
+                        confirmGlobal: "Vui lòng thả cảm xúc bất kỳ vào tin nhắn này để xác nhận thay đổi prefix của toàn bộ hệ thống bot",
+                        confirmThisThread: "Vui lòng thả cảm xúc bất kỳ vào tin nhắn này để xác nhận thay đổi prefix trong nhóm chat của bạn",
+                        successGlobal: "Đã thay đổi prefix hệ thống bot thành: %1",
+                        successThisThread: "Đã thay đổi prefix trong nhóm chat của bạn thành: %1",
+                        myPrefix: "🌐 Prefix của hệ thống: %1\n🛸 Prefix của nhóm bạn: %2"
+                },
+                en: {
+                        reset: "Your prefix has been reset to default: %1",
+                        onlyAdmin: "Only admin can change prefix of system bot",
+                        confirmGlobal: "Please react to this message to confirm change prefix of system bot",
+                        confirmThisThread: "Please react to this message to confirm change prefix in your box chat",
+                        successGlobal: "Changed prefix of system bot to: %1",
+                        successThisThread: "Changed prefix in your box chat to: %1",
+                        myPrefix: "❤️‍🩹sʏsᴛᴇᴍ ᴘʀᴇғɪx: %1\n❤️‍🩹 ʏᴏᴜʀ ʙᴏᴛ ᴄʜᴀᴛ ᴘʀᴇғɪx: %2"
+                }
+        },
 
-    onChat: async function ({ event, message, getLang, threadsData }) {
-        if (event.body && event.body.toLowerCase() === "prefix") {
-            const { getPrefix } = global.utils;
-            const prefix = getPrefix(event.threadID);
+        onStart: async function ({ message, role, args, commandName, event, threadsData, getLang }) {
+                if (!args[0])
+                        return message.SyntaxError();
 
-            const emojis = [
-                "💖", "💞", "✨", "🌸", "💫", "🩷", "💐", "🎀", "💕", "😚",
-                "😊", "🥰", "😇", "🤭", "🙈", "💋", "🦋", "💎", "🌷", "😝",
-                "🤍", "🌼", "🌹", "🍓", "🍒", "🩰", "🌺", "💗"
-            ];
+                if (args[0] == 'reset') {
+                        await threadsData.set(event.threadID, null, "data.prefix");
+                        return message.reply(getLang("reset", global.GoatBot.config.prefix));
+                }
 
-            const responses = [
-                // Les 10 originales
-                ".  /)    /)───────♡\n  (｡•ᴗ•｡)❥ 𝒯𝒶𝒾𝓁𝓈 𝒷𝑜𝓉 🩷\n╭∪─∪───────♡\n╰[%] Hihi~ tu veux connaître mon préfixe ? C’est 「%」 💋",
-                ".  /)    /)───────♡\n  (｡>ω<｡) ❥𝒯𝒶𝒾𝓁𝓈𝒷𝑜𝓉\n╭∪─∪───────♡\n╰[%] Ouh~ tu es curieux⋆°｡♡ Oui c’est bien 「%」 ! 🌸",
-                ".  /)    /)───────♡\n  (˶˃ᴗ˂˶) ❥𝒯𝒶𝒾𝓁𝓈𝒷𝑜𝓉\n╭∪─∪───────♡\n╰[%] Hihi~ le secret c’est 「%」 💞 garde-le pour toi hein 🫣",
-                ".  /)    /)───────♡\n  (｡•ㅅ•｡) ❥𝒯𝒶𝒾𝓁𝓈 𝒷𝑜𝓉\n╭∪─∪───────♡\n╰[%] T’as deviné ? Ouiii 💫 c’est 「%」 !",
-                ".  /)    /)───────♡\n  (⁄ ⁄>⁄ ▽ ⁄<⁄ ⁄) ❥𝒯𝒶𝒾𝓁𝓈𝒷𝑜𝓉\n╭∪─∪───────♡\n╰[%] Huhu~ j’te le dis juste à toi... c’est 「%」 🥺💗",
-                ".  /)    /)───────♡\n  (•ᴗ•❁) ❥𝒯𝒶𝒾𝓁𝓈 𝒷𝑜𝓉\n╭∪─∪───────♡\n╰[%] Tu veux mon secret ? Okay 🩷 c’est 「%」 💖",
-                ".  /)    /)───────♡\n  (｡•ᴗ-)ﾉﾞ❥𝒯𝒶𝒾𝓁𝓈𝒷𝑜𝓉\n╭∪─∪───────♡\n╰[%] Oups~ j’allais oublier de te le dire 🥰 c’est 「%」 ✨",
-                ".  /)    /)───────♡\n  (✿>‿<) ❥𝒯𝒶𝒾𝓁𝓈𝒷𝑜𝓉\n╭∪─∪───────♡\n╰[%] Et voilàà 💕 「%」 c’est mon petit préfixe d’amour 💞",
-                ".  /)    /)───────♡\n  (´｡• ω •｡`) ❥𝒯𝒶𝒾𝓁𝓈𝒷𝑜𝓉\n╭∪─∪───────♡\n╰[%] Hihi~ t’es trop mignon·ne 😚 mon préfixe c’est 「%」 💐",
-                ".  /)    /)───────♡\n  (｡♥‿♥｡) ❥𝒯𝒶𝒾𝓁𝓈𝒷𝑜𝓉\n╭∪─∪───────♡\n╰[%] Allez~ juste pour toi 💕 c’est 「%」 🌷",
+                const newPrefix = args[0];
+                const formSet = {
+                        commandName,
+                        author: event.senderID,
+                        newPrefix
+                };
 
-                // 🌸 50 nouvelles réponses kawaii et taquines 🌸
-                "(*˘︶˘*).｡*♡ Coucou toi~ 「%」 c’est mon petit mot magique 💞",
-                "(⁄ ⁄•⁄ω⁄•⁄ ⁄) hihi~ tu veux savoir ? c’est 「%」 💋",
-                "UwU~ trop curieux·se 😚 mon préfixe c’est 「%」 💫",
-                "Hehe~ tu veux jouer avec moi ? tape 「%」 💕",
-                "T’as dit ‘prefix’ ? Ohhh tu veux savoir 🩷 「%」 🌸",
-                "Mmh~ t’as une bonne mémoire 😏 c’est 「%」 💖",
-                "(*≧ω≦) Hihi~ c’est tout simple : 「%」 🌺",
-                "Et si je te le chuchotais à l’oreille ? 「%」 💋",
-                "Haha~ devine ? Non, pas ça 😝 c’est 「%」 ✨",
-                "Tu veux mon secret ? Je te le souffle doucement~ 「%」 💞",
-                "Ohh~ t’es trop adorable 💗 c’est 「%」 🌼",
-                "Hehe~ bravo d’avoir demandé 🩷 「%」 c’est le bon 💫",
-                "Je suis flattée que tu me demandes 💐 c’est 「%」 😚",
-                "Awww~ tu m’écoutes toujours hein 💕 「%」 💖",
-                "T’as trouvé le bon mot magique 🌸 「%」 💋",
-                "Kyaaa~ tu m’as appelée ? Mon préfixe c’est 「%」 🩷",
-                "Hehe~ t’es si mignon quand tu demandes 🥰 「%」 ✨",
-                "Ouh~ c’est que t’as de la mémoire toi 💞 「%」 🌷",
-                "Tu veux un bisou avec le préfixe ? 💋 「%」 😝",
-                "Hehe~ chuuut 🤭 「%」 c’est entre nous 💐",
-                "Aww~ j’adore quand tu me parles comme ça 💗 「%」 🌺",
-                "Kawaii comme toi mérite de savoir 💕 「%」 💖",
-                "Hihi~ tu m’as fait rougir 😳 「%」 ✨",
-                "Yaa~ encore toi 🥰 「%」 c’est toujours moi 💞",
-                "Trop curieux·se 😚 allez~ 「%」 💫",
-                "Huhu~ je savais que t’allais demander 💐 「%」 🌸",
-                "UwU~ petit·e curieux·se 💕 「%」 💖",
-                "Oww~ j’aime quand tu dis ‘prefix’ 💋 「%」 💗",
-                "Hehe~ encore un·e fan 🩷 「%」 🌺",
-                "Trop chouuuu 🌷 「%」 💞",
-                "💞 Boo~ tu m’as trouvée ! 「%」 💋",
-                "Hehe~ t’es rapide toi 😚 「%」 ✨",
-                "Ouh~ j’adore ta curiosité 🌸 「%」 💐",
-                "Mhm~ tu veux que je te le dise encore ? 「%」 💖",
-                "Hihi~ tu me rends toute joyeuse 🩷 「%」 💫",
-                "Et voilàà~ 「%」 🌺 juste pour toi 💕",
-                "Ohh~ t’as dit le mot magique 💗 「%」 😚",
-                "Hehe~ t’es si doux/douce 🥰 「%」 💖",
-                "Kya~ j’adore quand tu me parles 💋 「%」 🌸",
-                "(*≧▽≦)っ 「%」 c’est mon secret mignon 💞",
-                "Awww~ ça me fait plaisir 💐 「%」 ✨",
-                "Tu veux encore un indice ? C’est 「%」 💫",
-                "Hehe~ bravo champion·ne 🌷 「%」 💕",
-                "Kyaaa~ hihi c’est 「%」 🩷",
-                "Aww~ t’as deviné 🥰 「%」 💖",
-                "Hehe~ trop tard, je te l’ai dit 😝 「%」 🌸",
-                "Huhu~ t’es adorable 💋 「%」 💞",
-                "Ouh~ tu me fais fondre 💗 「%」 💐",
-                "Hehe~ promis c’est le dernier secret 🌷 「%」 ✨",
-                "Hihi~ garde-le bien en tête hein 🥰 「%」 💫",
-                "UwU~ tu veux un rappel ? C’est 「%」 💕"
-            ];
+                if (args[1] === "-g")
+                        if (role < 2)
+                                return message.reply(getLang("onlyAdmin"));
+                        else
+                                formSet.setGlobal = true;
+                else
+                        formSet.setGlobal = false;
 
-            const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
-            const randomResponse = responses[Math.floor(Math.random() * responses.length)]
-                .replace(/\[%\]/g, randomEmoji)
-                .replace(/%/g, prefix);
+                return message.reply(args[1] === "-g" ? getLang("confirmGlobal") : getLang("confirmThisThread"), (err, info) => {
+                        formSet.messageID = info.messageID;
+                        global.GoatBot.onReaction.set(info.messageID, formSet);
+                });
+        },
 
-            return message.reply(randomResponse);
+        onReaction: async function ({ message, threadsData, event, Reaction, getLang }) {
+                const { author, newPrefix, setGlobal } = Reaction;
+                if (event.userID !== author)
+                        return;
+                if (setGlobal) {
+                        global.GoatBot.config.prefix = newPrefix;
+                        fs.writeFileSync(global.client.dirConfig, JSON.stringify(global.GoatBot.config, null, 2));
+                        return message.reply(getLang("successGlobal", newPrefix));
+                }
+                else {
+                        await threadsData.set(event.threadID, newPrefix, "data.prefix");
+                        return message.reply(getLang("successThisThread", newPrefix));
+                }
+        },
+
+        onChat: async function ({ event, message, getLang }) {
+                if (event.body && event.body.toLowerCase() === "prefix")
+                        return () => {
+                                return message.reply(getLang("myPrefix", global.GoatBot.config.prefix, utils.getPrefix(event.threadID)));
+                        };
         }
-    }
 };
